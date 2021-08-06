@@ -21,6 +21,6 @@
 (defpackage #:didit
   (:use #:hunchentoot #:cl)
   (:shadow #:package)
-  (:export #:start-didit #:stop-didit))
+  (:export #:start-didit #:stop-didit #:check-didit #:alert/slack))
 
 (in-package #:didit)

@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: didit-pod
+  name: didit-pod
+spec:
+  containers:
+  - name: didit
+    image: localhost/didit:latest
+    ports:
+    - containerPort: 8080
+      hostPort: 8080
+      protocol: TCP
+    - containerPort: 4005
+      hostPort: 4005
+      protocol: TCP
+    - containerPort: 9101
+      hostPort: 9101
+      protocol: TCP
+    volumeMounts:
+    - mountPath: /etc/didit
+      name: didit-config
+    resources: {}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: {}
+      privileged: false
+      readOnlyRootFilesystem: false
+      seLinuxOptions: {}
+  volumes:
+  - name: didit-config
+    hostPath:
+      path: /home/runner/work/didit/didit/test/config.ini
+      type: File
+status: {}

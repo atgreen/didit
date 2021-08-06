@@ -23,11 +23,13 @@
   :serial t
   :components ((:file "package")
                (:file "util")
+               (:file "alert")
 	       (:file "didit"))
   :depends-on (:cl-toml :inferior-shell :hunchentoot
 	       :cl-fad :str :log4cl :cl-ppcre :quri
 	       :local-time :simple-date-time
-	       :thread-pool
+	       :ironclad :thread-pool
+               :bt-semaphore :scheduler
                :prometheus
 	       :prometheus.formats.text
 	       :prometheus.exposers.hunchentoot

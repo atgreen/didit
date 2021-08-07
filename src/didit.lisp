@@ -186,6 +186,9 @@ root-dir = \"/tmp/var/didit/\"
 					         :external-format :latin-1))
 	      (make-hash-table)))
 
+    (log:info "config.ini file = ~A"
+              (alexandria:read-file-into-string config-ini :external-format :latin-1))
+
     (maphash
      (lambda (key value)
        (log:info "config: ~A = ~A" key value))

@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: SAMPLE; Base: 10 -*-
+;;; -*- Mode: LISP; Syntax: COMMON-LISP; Package: DIDIT; Base: 10 -*-
 ;;;
 ;;; Copyright (C) 2021  Anthony Green <green@moxielogic.com>
 ;;;
@@ -271,6 +271,9 @@ root-dir = \"/tmp/var/didit/\"
 
       ;; Initialize prometheus
       (initialize-metrics)
+
+      ;; Start the scheduler
+      (scheduler:start-scheduler *scheduler*)
 
       (log:info "Starting server")
 

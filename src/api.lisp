@@ -9,7 +9,7 @@
 
 (defvar *thread-pool* (thread-pool:make-thread-pool 10))
 (defvar *scheduler* (make-instance 'scheduler:in-memory-scheduler))
-
+;(setf *scheduler* (make-instance 'scheduler:in-memory-scheduler))
 (defvar *didit-table* (make-hash-table :test 'equal))
 (defvar *alerts-table* (make-hash-table :test 'equal))
 
@@ -53,6 +53,6 @@ from a git repo."
     (bt:with-lock-held (*didit-lock*)
       (let ((didit (gethash didit-key *didit-table*)))
         (setf done? (didit-done didit))
-        (setf (didit-done didit) nil)))
-    (unless done?
-      (send-alert (didit-alert didit) (didit-name didit)))))
+        (setf (didit-done didit) nil)
+        (unless done?
+          (send-alert (didit-alert didit) (didit-name didit)))))))

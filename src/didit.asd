@@ -27,6 +27,7 @@
 	       (:file "didit"))
   :depends-on (:cl-fad
                :cl-toml
+:drakma
                :easy-routes
                :hunchentoot
                :inferior-shell

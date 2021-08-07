@@ -272,8 +272,8 @@ root-dir = \"/tmp/var/didit/\"
       ;; Initialize prometheus
       (initialize-metrics)
 
-      ;; Start the scheduler
-      (scheduler:start-scheduler *scheduler*)
+      ;; Start the scheduler in its own thread
+      (bt:make-thread (lambda () (scheduler:start-scheduler *scheduler*)))
 
       (log:info "Starting server")
 

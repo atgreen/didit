@@ -200,74 +200,75 @@ root-dir = \"/tmp/var/didit/\"
       ;; Extract any config.ini settings here.
       (setf *server-uri* (get-config-value "server-uri"))
 
-    ;; This is the directory where we check out policies.  Make sure it
-    ;; ends with a trailing '/'.
-    ;;
-    (setf *config-dir*
-	  (let ((dir (get-config-value "root-dir")))
-	    (pathname
-	     (if (str:ends-with? "/" dir)
-		 (str:concat dir "config/")
-		 (str:concat dir "/config/")))))
+      ;; This is the directory where we check out policies.  Make sure it
+      ;; ends with a trailing '/'.
+      ;;
+      (setf *config-dir*
+	    (let ((dir (get-config-value "root-dir")))
+	      (pathname
+	       (if (str:ends-with? "/" dir)
+		   (str:concat dir "config/")
+		   (str:concat dir "/config/")))))
 
-    ;; Pulling git-hosted config
-    (pull-repo *config-dir* (get-config-value "config-repo"))
+      ;; Pulling git-hosted config
+      (pull-repo *config-dir* (or (uiop:getenv "CONFIG_REPO")
+                                  (get-config-value "config-repo")))
 
-    ;; Load the config.ini file
-    (let* ((config (let ((repo.ini-filename
-                           (merge-pathnames *config-dir* "repos.ini")))
-                     (if (fad:file-exists-p repo.ini-filename)
-                         (cl-toml:parse
-                          (alexandria:read-file-into-string repo.ini-filename
-                                                            :external-format :latin-1))
-                         (make-hash-table))))
-           (repos (gethash "repos" config)))
-      (when repos
-        (maphash
-         (lambda (key value)
-           (let* ((repo (gethash "repo" value))
-                  (prefix (gethash "prefix" value))
-                  (repo-dirname (str:concat (namestring (get-config-value "root-dir"))
-                                            (subseq (ironclad:byte-array-to-hex-string
-                                                     (ironclad:digest-sequence
-                                                      :sha1 (flexi-streams:string-to-octets repo)))
-                                                    0 8))))
-             (pull-repo repo-dirname repo)
-             (let* ((didit.ini-filename (concatenate 'string repo-dirname "/didit.ini"))
-                    (didit.ini (if (fad:file-exists-p didit.ini-filename)
-                                   (cl-toml:parse
-                                    (alexandria:read-file-into-string didit.ini-filename
-                                                                      :external-format :latin-1))
-                                   (make-hash-table))))
-               (maphash #'print-hash-entry didit.ini)
-               ;; Process all of the alerts entries
-               (let ((alerts (gethash "alerts" didit.ini)))
-                 (maphash (lambda (key value)
-                            (setf (gethash (format nil "~A/~A" prefix key) *alerts-table*)
-                                  (make-instance (read-from-string
-                                                  (str:concat "didit:alert/" (gethash "type" value))) :config value)))
-                          alerts))
-               ;; Process all of the didit entries
-               (let ((didits (gethash "didit" didit.ini)))
-                 (maphash (lambda (key value)
-                            (let ((cron (gethash "cron" value))
-                                  (token (gethash "token" value)))
-                              (log:info "~A ~A" cron token)
-                              (if (not (= 5 (length (split-sequence:split-sequence #\Space cron))))
-                                  (error "Invalid schedule format: ~A" cron))
-                              (log:info "/didit/~A/~A" prefix token)
-                              (setf (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*)
-                                    (make-didit
-                                     :name (gethash "name" value)
-                                     :alert (gethash (format nil "~A/~A" prefix (gethash "alert" value)) *alerts-table*)
-                                     :token token
-                                     :scheduler-task (scheduler:create-scheduler-task
-                                                      *scheduler*
-                                                      (format nil "~A (didit:check-didit \"/didit/~A/~A\")" cron prefix token))))
-                              (log:info ">> ~A" (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*))))
-                          didits)
-                 (log:info didits)))))
-         repos)))
+      ;; Load the config.ini file
+      (let* ((config (let ((repo.ini-filename
+                             (merge-pathnames *config-dir* "repos.ini")))
+                       (if (fad:file-exists-p repo.ini-filename)
+                           (cl-toml:parse
+                            (alexandria:read-file-into-string repo.ini-filename
+                                                              :external-format :latin-1))
+                           (make-hash-table))))
+             (repos (gethash "repos" config)))
+        (when repos
+          (maphash
+           (lambda (key value)
+             (let* ((repo (gethash "repo" value))
+                    (prefix (gethash "prefix" value))
+                    (repo-dirname (str:concat (namestring (get-config-value "root-dir"))
+                                              (subseq (ironclad:byte-array-to-hex-string
+                                                       (ironclad:digest-sequence
+                                                        :sha1 (flexi-streams:string-to-octets repo)))
+                                                      0 8))))
+               (pull-repo repo-dirname repo)
+               (let* ((didit.ini-filename (concatenate 'string repo-dirname "/didit.ini"))
+                      (didit.ini (if (fad:file-exists-p didit.ini-filename)
+                                     (cl-toml:parse
+                                      (alexandria:read-file-into-string didit.ini-filename
+                                                                        :external-format :latin-1))
+                                     (make-hash-table))))
+                 (maphash #'print-hash-entry didit.ini)
+                 ;; Process all of the alerts entries
+                 (let ((alerts (gethash "alerts" didit.ini)))
+                   (maphash (lambda (key value)
+                              (setf (gethash (format nil "~A/~A" prefix key) *alerts-table*)
+                                    (make-instance (read-from-string
+                                                    (str:concat "didit:alert/" (gethash "type" value))) :config value)))
+                            alerts))
+                 ;; Process all of the didit entries
+                 (let ((didits (gethash "didit" didit.ini)))
+                   (maphash (lambda (key value)
+                              (let ((cron (gethash "cron" value))
+                                    (token (gethash "token" value)))
+                                (log:info "~A ~A" cron token)
+                                (if (not (= 5 (length (split-sequence:split-sequence #\Space cron))))
+                                    (error "Invalid schedule format: ~A" cron))
+                                (log:info "/didit/~A/~A" prefix token)
+                                (setf (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*)
+                                      (make-didit
+                                       :name (gethash "name" value)
+                                       :alert (gethash (format nil "~A/~A" prefix (gethash "alert" value)) *alerts-table*)
+                                       :token token
+                                       :scheduler-task (scheduler:create-scheduler-task
+                                                        *scheduler*
+                                                        (format nil "~A (didit:check-didit \"/didit/~A/~A\")" cron prefix token))))
+                                (log:info ">> ~A" (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*))))
+                            didits)
+                   (log:info didits)))))
+           repos)))
 
       ;; Initialize prometheus
       (initialize-metrics)

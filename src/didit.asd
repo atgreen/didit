@@ -31,7 +31,6 @@
                :hunchentoot
                :inferior-shell
                :log4cl
-               :thread-pool
                :bt-semaphore
                :scheduler
                :ironclad

@@ -21,4 +21,4 @@
 (defpackage #:didit
   (:use #:cl)
   (:shadow #:package)
-  (:export #:start-server #:stop-server))
+  (:export #:start-server #:stop-server #:alert/slack))

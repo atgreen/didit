@@ -23,7 +23,7 @@
   :serial t
   :components ((:file "package")
                (:file "api")
-;               (:file "alert")
+               (:file "alert")
 	       (:file "didit"))
   :depends-on (:cl-fad
                :cl-toml

@@ -162,6 +162,9 @@ root-dir = \"/tmp/var/didit/\"
   "Shutdown the HTTP handler"
   `(hunchentoot:stop ,handler))
 
+(defun print-hash-entry (key value)
+  (format t "The value associated with the key ~S is ~S~%" key value))
+
 (defun start-server (&optional (config-ini "/etc/didit/config.ini"))
 
   (bt:with-lock-held (*server-lock*)

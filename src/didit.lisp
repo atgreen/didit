@@ -186,6 +186,11 @@ root-dir = \"/tmp/var/didit/\"
 					         :external-format :latin-1))
 	      (make-hash-table)))
 
+    (maphash
+     (lambda (key value)
+       (log:info "config: ~A = ~A" key value))
+     *config*)
+
     (flet ((get-config-value (key)
 	     (let ((value (or (gethash key *config*)
 			      (gethash key *default-config*)

@@ -73,13 +73,12 @@ jobs:
     - name: Test
       run: |
         podman play kube test/test-pod.yml
-        timeout -s TERM 45 bash -c \
+        (timeout -s TERM 45 bash -c \
           'while [[ "$(curl -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\
             do echo "Waiting for ${0}" && sleep 2;\
-           done' http://localhost:8080/health
-        ./test/test.sh localhost:8080 || \
+           done' http://localhost:8080/health && \
+         ./test/test.sh localhost:8080) || \
         (EXIT_CODE=$?
-         curl -s http://localhost:8080
          echo "==== Container Logs ================================"
          podman logs didit-pod-didit
          exit $EXIT_CODE)

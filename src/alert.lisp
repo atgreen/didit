@@ -12,6 +12,7 @@
 
 (defmethod send-alert ((alert/slack alert) message)
   (log:info "ALERT: ~A" message)
+  (log:info "webhook ~A" (webhook-url alert))
   (multiple-value-bind (a b c d e f g)
       (drakma:http-request (webhook-url alert)
                            :method :post

@@ -28,7 +28,7 @@
    (job-template :reader job-template)))
 
 (defmethod initialize-instance :after ((alert alert/tower) &key)
-  (with-slots (host username password job-template) alert
+  (with-slots (config host username password job-template) alert
     (setf host (gethash "host" config))
     (setf username (gethash "username" config))
     (setf password (gethash "password" config))
@@ -37,7 +37,7 @@
 (defmethod send-alert ((alert alert/tower) message)
   (log:info "alert/tower: ~A" message)
   (with-slots (host username password job-template) alert
-    (let ((command (format nil "tower-cli --no-input -h ~A -u ~A -p ~A -J ~A"
+    (let ((command (format nil "tower-cli job launch --no-input -h ~A -u ~A -p ~A -J ~A"
                            host username password job-template)))
       (dolist (line (inferior-shell:run command))
         (log:info line)))))

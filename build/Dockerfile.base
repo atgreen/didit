@@ -13,9 +13,10 @@ FROM quay.io/containerlisp/lisp-10-ubi8
 
 COPY src/didit.asd /tmp
 USER 0
-RUN dnf install -y git
+RUN dnf install -y python3-pip && dnf clean all
 USER 1001
-RUN sbcl --eval '(let* ((ds (with-open-file (stream "/tmp/didit.asd") \
+RUN pip3 install --user ansible-tower-cli
+RUN sbcl --eval '(let* ((ds (with-open-file (stream "/tmp/didit.asd")             \
                               (read stream)))                                     \
                         (pos (position :DEPENDS-ON ds)))                          \
                    (dolist (p (nth (+ pos 1) ds))                                 \

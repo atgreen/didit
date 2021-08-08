@@ -64,7 +64,7 @@
 (defvar *default-config* nil)
 (defparameter +default-config-text+
 "server-uri = \"http://localhost:8080\"
-config-repo = \"http://github.com/atgreen/didit-test\"
+config-repo = \"FIXME\"
 root-dir = \"/tmp/var/didit/\"
 ")
 

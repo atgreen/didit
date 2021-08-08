@@ -72,7 +72,7 @@ jobs:
 
     - name: Test
       run: |
-        echo "config-repo = \"${{ secrets.CONFIG_REPO }}\"" >> ./test/config.ini
+        echo -n "config-repo = \"${{ secrets.CONFIG_REPO }}\"" >> ./test/config.ini
         podman play kube test/test-pod.yml
         (timeout -s TERM 45 bash -c \
           'while [[ "$(curl -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\

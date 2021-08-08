@@ -25,20 +25,21 @@
                (:file "api")
                (:file "alert")
 	       (:file "didit"))
-  :depends-on (:cl-fad
+  :depends-on (:bt-semaphore
+               :cl-fad
+               :cl-json
                :cl-toml
-:drakma
+               :drakma
                :easy-routes
                :hunchentoot
                :inferior-shell
-               :log4cl
-               :bt-semaphore
-               :scheduler
                :ironclad
+               :log4cl
                :markup
                :prometheus
                :prometheus.collectors.process
                :prometheus.collectors.sbcl
                :prometheus.exposers.hunchentoot
                :prometheus.formats.text
+               :scheduler
                :str))

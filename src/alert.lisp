@@ -11,14 +11,12 @@
     (setf webhook-url (gethash "webhook-url" config))))
 
 (defmethod send-alert ((alert alert/slack) message)
-  (log:info "webhook ~A" (webhook-url alert))
-  (log:info "ALERT: ~A" message)
+  (log:info "alert/slack: ~A" message)
   (multiple-value-bind (a b c d e f g)
       (drakma:http-request (webhook-url alert)
                            :method :post
                            :content-type "application/json"
                            :redirect 100
                            :content (json:encode-json-to-string
-                                     `((:TEXT . message))))
-    (let ((result (flexi-streams:octets-to-string a :external-format :utf-8)))
-      (log:info result))))
+                                     `((:TEXT . ,(str:concat "ALERT: " message)))))
+    (log:info a)))

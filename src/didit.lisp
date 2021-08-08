@@ -219,8 +219,7 @@ root-dir = \"/tmp/var/didit/\"
 		   (str:concat dir "/config/")))))
 
       ;; Pulling git-hosted config
-      (pull-repo *config-dir* (or (uiop:getenv "CONFIG_REPO")
-                                  (get-config-value "config-repo")))
+      (pull-repo *config-dir* (get-config-value "config-repo"))
 
       ;; Load the config.ini file
       (let* ((config (let ((repo.ini-filename

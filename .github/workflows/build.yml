@@ -71,8 +71,10 @@ jobs:
           APP_VERSION=${{ steps.version.outputs.version }}
 
     - name: Test
+      env:
+        SECRET_REPO: ${{ secrets.CONFIG_REPO }}
       run: |
-        echo -n "config-repo = \"${{ secrets.CONFIG_REPO }}\"" >> ./test/config.ini
+        echo -n "config-repo = \"${SECRET_REPO}\"" >> ./test/config.ini
         podman play kube test/test-pod.yml
         (timeout -s TERM 45 bash -c \
           'while [[ "$(curl -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\

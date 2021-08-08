@@ -178,6 +178,9 @@ root-dir = \"/tmp/var/didit/\"
     ;; Read the built-in configuration settings.
     (setf *default-config* (cl-toml:parse +default-config-text+))
 
+    (log:info "config.ini file = ~A"
+              (alexandria:read-file-into-string config-ini :external-format :latin-1))
+
     ;; Read the user configuration settings.
     (setf *config*
   	  (if (fad:file-exists-p config-ini)
@@ -185,9 +188,6 @@ root-dir = \"/tmp/var/didit/\"
 	       (alexandria:read-file-into-string config-ini
 					         :external-format :latin-1))
 	      (make-hash-table)))
-
-    (log:info "config.ini file = ~A"
-              (alexandria:read-file-into-string config-ini :external-format :latin-1))
 
     (maphash
      (lambda (key value)

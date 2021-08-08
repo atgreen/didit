@@ -7,7 +7,7 @@
   ((webhook-url :reader webhook-url)))
 
 (defmethod initialize-instance :after ((alert alert/slack) &key)
-  (with-slots (config channel token) alert
+  (with-slots (config webhook-url) alert
     (setf webhook-url (gethash "webhook-url" config))))
 
 (defmethod send-alert ((alert/slack alert) message)

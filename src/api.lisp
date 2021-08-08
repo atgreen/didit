@@ -51,6 +51,7 @@
 (defun pull-repo (repo-dirname repo-git-uri)
   "Download the very latest version of REPO-GIT-URI into REPO-DIRNAME
 from a git repo."
+  (log:info "pull repo ~A" repo-git-uri)
   (unless *disconneted-test*
     (let ((command (if (fad:directory-exists-p repo-dirname)
                        (format nil "bash -c \"(cd ~A; /usr/bin/git pull)\""

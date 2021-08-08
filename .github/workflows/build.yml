@@ -86,6 +86,8 @@ jobs:
          echo "==== Container Logs ================================"
          podman logs didit-pod-didit
          exit $EXIT_CODE)
+        echo "==== Container Logs ================================"
+        podman logs didit-pod-didit
 
     - name: Push to registry
       id: push-to-quay

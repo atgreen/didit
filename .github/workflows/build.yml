@@ -74,7 +74,7 @@ jobs:
       env:
         SECRET_REPO: ${{ secrets.CONFIG_REPO }}
       run: |
-        export SHORT=$(echo -n ${SECRET_REPO} | sed 's/.$//')
+        export SHORT=$(echo -n ${SECRET_REPO})
         echo -n "config-repo = \""${SHORT}"\"" >> ./test/config.ini
         podman play kube test/test-pod.yml
         (timeout -s TERM 45 bash -c \

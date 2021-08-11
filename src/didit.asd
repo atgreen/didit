@@ -24,18 +24,23 @@
   :components ((:file "package")
                (:file "api")
                (:file "alert")
+               (:file "etcd")
 	       (:file "didit"))
-  :depends-on (:bt-semaphore
+  :depends-on (:async-process
+               :bt-semaphore
                :cl-fad
                :cl-json
+               :cl-ppcre
                :cl-toml
                :drakma
                :easy-routes
+               :flexi-streams
                :hunchentoot
                :inferior-shell
                :ironclad
                :log4cl
                :markup
+               :metabang-bind
                :prometheus
                :prometheus.collectors.process
                :prometheus.collectors.sbcl

@@ -165,42 +165,45 @@ root-dir = \"/tmp/var/didit/\"
 (defun print-hash-entry (key value)
   (format t "The value associated with the key ~S is ~S~%" key value))
 
-(defmacro with-etcd ((etcd) &body body)
-  `(let ((,etcd (uiop:launch-program "etcd" :output :stream)))
-     (unwind-protect
-          (progn
-            ,@body)
-       (if (and ,etcd (uiop:process-alive-p ,etcd))
-           (uiop:terminate-process ,etcd :urgent t)))))
+(defmethod etcd:become-leader ((etcd etcd:etcd))
+  (format t "**** I AM THE LEADER ***********"))
+
+(defmethod etcd:become-follower ((etcd etcd:etcd))
+  (format t "**** I AM A FOLLOWER ***********"))
 
 (defun start-server (&optional (config-ini "/etc/didit/config.ini"))
 
   (bt:with-lock-held (*server-lock*)
-    (with-etcd (etcd)
-      (setf hunchentoot:*catch-errors-p* t)
-      (setf hunchentoot:*show-lisp-errors-p* t)
-      (setf hunchentoot:*show-lisp-backtraces-p* t)
 
-      (log:info "Starting didit version ~A" +didit-version+)
+    (setf hunchentoot:*catch-errors-p* t)
+    (setf hunchentoot:*show-lisp-errors-p* t)
+    (setf hunchentoot:*show-lisp-backtraces-p* t)
 
-      ;; Read the built-in configuration settings.
-      (setf *default-config* (cl-toml:parse +default-config-text+))
+    (log:info "Starting didit version ~A" +didit-version+)
 
-      (log:info "config.ini file = ~A"
-                (alexandria:read-file-into-string config-ini :external-format :latin-1))
+    ;; Read the built-in configuration settings.
+    (setf *default-config* (cl-toml:parse +default-config-text+))
 
-      ;; Read the user configuration settings.
-      (setf *config*
-  	    (if (fad:file-exists-p config-ini)
-	        (cl-toml:parse
-	         (alexandria:read-file-into-string config-ini
-					           :external-format :latin-1))
-	        (make-hash-table)))
+    (log:info "config.ini file = ~A"
+              (alexandria:read-file-into-string config-ini :external-format :latin-1))
 
-      (maphash
-       (lambda (key value)
-         (log:info "config: ~A = ~A" key value))
-       *config*)
+    ;; Read the user configuration settings.
+    (setf *config*
+  	  (if (fad:file-exists-p config-ini)
+	      (cl-toml:parse
+	       (alexandria:read-file-into-string config-ini
+					         :external-format :latin-1))
+	      (make-hash-table)))
+
+    (maphash
+     (lambda (key value)
+       (log:info "config: ~A = ~A" key value))
+     *config*)
+
+    (etcd:with-etcd (etcd (gethash "etcd" *config*))
+
+;      (etcd:put etcd "hello" "world")
+;      (log:info (etcd:get etcd "hello"))
 
       (flet ((get-config-value (key)
 	       (let ((value (or (gethash key *config*)
@@ -233,10 +236,12 @@ root-dir = \"/tmp/var/didit/\"
         (let* ((config (let ((repo.ini-filename
                                (merge-pathnames *config-dir* "repos.ini")))
                          (if (fad:file-exists-p repo.ini-filename)
-                             (cl-toml:parse
-                              (alexandria:read-file-into-string repo.ini-filename
-                                                                :external-format :latin-1))
-                             (make-hash-table))))
+                             (let ((file-contents (alexandria:read-file-into-string repo.ini-filename
+                                                                                    :external-format :latin-1)))
+                               (progn
+;                                 (etcd:put etcd "repo.ini" file-contents)
+                                 (cl-toml:parse file-contents))
+                             (make-hash-table)))))
                (repos (gethash "repos" config)))
           (when repos
             (maphash
@@ -296,10 +301,10 @@ root-dir = \"/tmp/var/didit/\"
         (setf hunchentoot:*dispatch-table* +didit-dispatch-table+)
         (setf prom:*default-registry* *didit-registry*)
         (setf *print-pretty* nil)
-        (setf *handler* (let ((exposer (make-instance 'exposer-acceptor :registry *didit-registry* :port 9101)))
+        (setf *handler* (let ((exposer (make-instance 'exposer-acceptor :registry *didit-registry* :port (parse-integer (get-config-value "prometheus-port")))))
                           (hunchentoot:start (make-instance 'application
                                                             :document-root #p"./"
-                                                            :port 8080
+                                                            :port (parse-integer (get-config-value "server-port"))
                                                             :exposer exposer))))
 
         (bt:condition-wait *shutdown-cv* *server-lock*)))))

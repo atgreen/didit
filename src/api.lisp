@@ -25,7 +25,6 @@
   (token nil :type string)
   (done nil))
 
-(defvar *scheduler* (make-instance 'scheduler:in-memory-scheduler))
 (defvar *didit-table* (make-hash-table :test 'equal))
 (defvar *alerts-table* (make-hash-table :test 'equal))
 

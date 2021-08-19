@@ -24,10 +24,10 @@
   :components ((:file "package")
                (:file "api")
                (:file "alert")
-               (:file "etcd")
 	       (:file "didit"))
   :depends-on (:async-process
                :bt-semaphore
+               :cl-etcd
                :cl-fad
                :cl-json
                :cl-ppcre

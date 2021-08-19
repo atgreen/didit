@@ -7,11 +7,14 @@ all:
 
 run:
 	sbcl --eval '(pushnew (truename "./src") ql:*local-project-directories* )' \
+	     --eval '(pushnew (truename "./src/third-party/scheduler") ql:*local-project-directories* )' \
+	     --eval '(pushnew (truename "./src/third-party/cl-etcd") ql:*local-project-directories* )' \
 	     --eval '(ql:register-local-projects)' \
 	     --eval '(ql:quickload :didit)' \
-	     --eval '(didit:start-server)'
+	     --eval '(didit:start-server "test/private.ini")'
 
 podman-start:
+	-rm -rf src/*.etcd
 	sh test/podman-start.sh
 
 podman-stop:

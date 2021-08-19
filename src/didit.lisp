@@ -57,6 +57,20 @@
 (defvar *server-lock* (bt:make-lock))
 
 ;; ----------------------------------------------------------------------------
+;; Current state
+
+(defvar *current-state* nil)
+(defvar *current-state-lock* (bt:make-lock))
+
+(defun get-current-state ()
+  (bt:with-lock-held (*current-state-lock*)
+    *current-state*))
+
+(defun set-current-state ()
+  (bt:with-lock-held (*current-state-lock*)
+    (setf *current-state* state)))
+
+;; ----------------------------------------------------------------------------
 ;; Default configuration.  Overridden by external config file.
 ;; Config files are required to be in TOML format.
 
@@ -74,6 +88,8 @@ root-dir = \"/tmp/var/didit/\"
 ;; application.
 
 (defvar *server-uri* nil)
+
+(defvar *scheduler* (make-instance 'scheduler:in-memory-scheduler))
 
 ;; ----------------------------------------------------------------------------
 ;; Initialize prometheus values.
@@ -165,11 +181,114 @@ root-dir = \"/tmp/var/didit/\"
 (defun print-hash-entry (key value)
   (format t "The value associated with the key ~S is ~S~%" key value))
 
-(defmethod etcd:become-leader ((etcd etcd:etcd))
-  (format t "**** I AM THE LEADER ***********"))
+(defvar *leader-lock* (bt:make-lock))
 
-(defmethod etcd:become-follower ((etcd etcd:etcd))
-  (format t "**** I AM A FOLLOWER ***********"))
+(defun short-hash (s)
+  (subseq (ironclad:byte-array-to-hex-string
+           (ironclad:digest-sequence
+            :sha1 (flexi-streams:string-to-octets s)))
+          0 8))
+
+(defun become-leader (etcd)
+  (bt:with-lock-held (*leader-lock*)
+    (log:info "I am the leader.")
+
+    ;; TODO push repos.ini last, so we know all of the didit.ini files
+    ;; are in etcd.
+
+    ;; We don't want every node reaching out to the git repos and
+    ;; pulling (possibly inconsistent) content, and so we leave this
+    ;; task to the leader, who shares the repo contents with the other
+    ;; nodes through etcd.
+
+    (flet ((get-config-value (key)
+	     (let ((value (or (gethash key *config*)
+			      (gethash key *default-config*)
+			      (error "config does not contain key '~A'" key))))
+	       ;; Some of the users of these values are very strict
+	       ;; when it comes to string types... I'm looking at you,
+	       ;; SB-BSD-SOCKETS:GET-HOST-BY-NAME.
+	       (if (subtypep (type-of value) 'vector)
+		   (coerce value 'simple-string)
+		   value))))
+
+      (log:info "Pulling config repo ~A" (get-config-value "config-repo"))
+      (pull-repo *config-dir* (get-config-value "config-repo"))
+
+      (let* ((repo.ini-filename
+               (merge-pathnames *config-dir* "repos.ini")))
+        (if (fad:file-exists-p repo.ini-filename)
+            (let* ((file-contents (alexandria:read-file-into-string repo.ini-filename
+                                                                    :external-format :latin-1))
+                   (config (cl-toml:parse file-contents))
+                   (repos (gethash "repos" config)))
+              (when repos
+                (maphash
+                 (lambda (key value)
+                   (let* ((repo (gethash "repo" value))
+                          (prefix (gethash "prefix" value))
+                          (repo-dirname (str:concat (namestring (get-config-value "root-dir"))
+                                                    (short-hash repo))))
+                     (pull-repo repo-dirname repo)
+                     (let* ((didit.ini-filename (concatenate 'string repo-dirname "/didit.ini"))
+                            (file-contents (if (fad:file-exists-p didit.ini-filename)
+                                               (alexandria:read-file-into-string didit.ini-filename
+                                                                                 :external-format :latin-1)
+                                               ""))
+                            (didit.ini (cl-toml:parse file-contents)))
+                       (maphash #'print-hash-entry didit.ini)
+                       (setf (cl-etcd:get-etcd (short-hash repo) etcd) (cl-base64:string-to-base64-string file-contents)))))
+                 repos)
+                (setf (cl-etcd:get-etcd "repos.ini" etcd) (cl-base64:string-to-base64-string file-contents))
+                (refresh-state etcd))))))))
+
+(defun refresh-state (etcd)
+  (log:info (cl-etcd:get-etcd "repos.ini" etcd))
+  (let* ((file-contents (cl-base64:base64-string-to-string (cl-etcd:get-etcd "repos.ini" etcd)))
+         (config (cl-toml:parse file-contents))
+         (repos (gethash "repos" config)))
+    (log:info "A")
+    (when repos
+      (maphash
+       (lambda (key value)
+         (log:info "B ~A ~A" key value)
+         (let* ((repo (gethash "repo" value))
+                (prefix (gethash "prefix" value))
+                (repo-hash (short-hash repo))
+                (didit.ini (cl-toml:parse (cl-base64:base64-string-to-string (cl-etcd:get-etcd repo-hash etcd)))))
+             (maphash #'print-hash-entry didit.ini)
+
+             ;; Process all of the alerts entries
+             (let ((alerts (gethash "alerts" didit.ini)))
+               (maphash (lambda (key value)
+                          (setf (gethash (format nil "~A/~A" prefix key) *alerts-table*)
+                                (make-instance (read-from-string
+                                                (str:concat "didit:alert/" (gethash "type" value))) :config value)))
+                        alerts))
+             ;; Process all of the didit entries
+             (let ((didits (gethash "didit" didit.ini)))
+               (maphash (lambda (key value)
+                          (let ((cron (gethash "cron" value))
+                                (token (gethash "token" value)))
+                            (if (not (= 5 (length (split-sequence:split-sequence #\Space cron))))
+                                (error "Invalid schedule format: ~A" cron))
+                            (log:info "/didit/~A/~A" prefix token)
+                            (setf (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*)
+                                  (make-didit
+                                   :name (gethash "name" value)
+                                   :alert (gethash (format nil "~A/~A" prefix (gethash "alert" value)) *alerts-table*)
+                                   :token token
+                                   :scheduler-task (scheduler:create-scheduler-task
+                                                    *scheduler*
+                                                    (format nil "~A (didit:check-didit \"/didit/~A/~A\")" cron prefix token))))
+                            (log:info ">> ~A" (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*))))
+                        didits))))
+       repos))))
+
+(defun become-follower (etcd)
+  (log:info "I am a follower."))
+;  (when (cl-etcd:watch "repos.ini" etcd)
+;    (refresh-state)))
 
 (defun start-server (&optional (config-ini "/etc/didit/config.ini"))
 
@@ -200,98 +319,34 @@ root-dir = \"/tmp/var/didit/\"
        (log:info "config: ~A = ~A" key value))
      *config*)
 
-    (etcd:with-etcd (etcd (gethash "etcd" *config*))
+    (flet ((get-config-value (key)
+	     (let ((value (or (gethash key *config*)
+			      (gethash key *default-config*)
+			      (error "config does not contain key '~A'" key))))
+	       ;; Some of the users of these values are very strict
+	       ;; when it comes to string types... I'm looking at you,
+	       ;; SB-BSD-SOCKETS:GET-HOST-BY-NAME.
+	       (if (subtypep (type-of value) 'vector)
+		   (coerce value 'simple-string)
+		   value))))
 
-;      (etcd:put etcd "hello" "world")
-;      (log:info (etcd:get etcd "hello"))
+      ;; Extract any config.ini settings here.
+      (setf *server-uri* (get-config-value "server-uri"))
 
-      (flet ((get-config-value (key)
-	       (let ((value (or (gethash key *config*)
-			        (gethash key *default-config*)
-			        (error "config does not contain key '~A'" key))))
-	         ;; Some of the users of these values are very strict
-	         ;; when it comes to string types... I'm looking at you,
-	         ;; SB-BSD-SOCKETS:GET-HOST-BY-NAME.
-	         (if (subtypep (type-of value) 'vector)
-		     (coerce value 'simple-string)
-		     value))))
+      ;; This is the directory where we check out policies.  Make sure it
+      ;; ends with a trailing '/'.
+      ;;
+      (setf *config-dir*
+	    (let ((dir (get-config-value "root-dir")))
+	      (pathname
+	       (if (str:ends-with? "/" dir)
+		   (str:concat dir "config/")
+		   (str:concat dir "/config/")))))
 
-        ;; Extract any config.ini settings here.
-        (setf *server-uri* (get-config-value "server-uri"))
+      ;; Initialize prometheus
+      (initialize-metrics)
 
-        ;; This is the directory where we check out policies.  Make sure it
-        ;; ends with a trailing '/'.
-        ;;
-        (setf *config-dir*
-	      (let ((dir (get-config-value "root-dir")))
-	        (pathname
-	         (if (str:ends-with? "/" dir)
-		     (str:concat dir "config/")
-		     (str:concat dir "/config/")))))
-
-        ;; Pulling git-hosted config
-        (pull-repo *config-dir* (get-config-value "config-repo"))
-
-        ;; Load the config.ini file
-        (let* ((config (let ((repo.ini-filename
-                               (merge-pathnames *config-dir* "repos.ini")))
-                         (if (fad:file-exists-p repo.ini-filename)
-                             (let ((file-contents (alexandria:read-file-into-string repo.ini-filename
-                                                                                    :external-format :latin-1)))
-                               (progn
-;                                 (etcd:put etcd "repo.ini" file-contents)
-                                 (cl-toml:parse file-contents))
-                             (make-hash-table)))))
-               (repos (gethash "repos" config)))
-          (when repos
-            (maphash
-             (lambda (key value)
-               (let* ((repo (gethash "repo" value))
-                      (prefix (gethash "prefix" value))
-                      (repo-dirname (str:concat (namestring (get-config-value "root-dir"))
-                                                (subseq (ironclad:byte-array-to-hex-string
-                                                         (ironclad:digest-sequence
-                                                          :sha1 (flexi-streams:string-to-octets repo)))
-                                                        0 8))))
-                 (pull-repo repo-dirname repo)
-                 (let* ((didit.ini-filename (concatenate 'string repo-dirname "/didit.ini"))
-                        (didit.ini (if (fad:file-exists-p didit.ini-filename)
-                                       (cl-toml:parse
-                                        (alexandria:read-file-into-string didit.ini-filename
-                                                                          :external-format :latin-1))
-                                       (make-hash-table))))
-                   (maphash #'print-hash-entry didit.ini)
-                   ;; Process all of the alerts entries
-                   (let ((alerts (gethash "alerts" didit.ini)))
-                     (maphash (lambda (key value)
-                                (setf (gethash (format nil "~A/~A" prefix key) *alerts-table*)
-                                      (make-instance (read-from-string
-                                                      (str:concat "didit:alert/" (gethash "type" value))) :config value)))
-                              alerts))
-                   ;; Process all of the didit entries
-                   (let ((didits (gethash "didit" didit.ini)))
-                     (maphash (lambda (key value)
-                                (let ((cron (gethash "cron" value))
-                                      (token (gethash "token" value)))
-                                  (log:info "~A ~A" cron token)
-                                  (if (not (= 5 (length (split-sequence:split-sequence #\Space cron))))
-                                      (error "Invalid schedule format: ~A" cron))
-                                  (log:info "/didit/~A/~A" prefix token)
-                                  (setf (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*)
-                                        (make-didit
-                                         :name (gethash "name" value)
-                                         :alert (gethash (format nil "~A/~A" prefix (gethash "alert" value)) *alerts-table*)
-                                         :token token
-                                         :scheduler-task (scheduler:create-scheduler-task
-                                                          *scheduler*
-                                                          (format nil "~A (didit:check-didit \"/didit/~A/~A\")" cron prefix token))))
-                                  (log:info ">> ~A" (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*))))
-                              didits)
-                     (log:info didits)))))
-             repos)))
-
-        ;; Initialize prometheus
-        (initialize-metrics)
+      (cl-etcd:with-etcd (etcd (gethash "etcd" *config*) :on-leader #'become-leader :on-follower #'become-follower)
 
         ;; Start the scheduler in its own thread
         (bt:make-thread (lambda () (scheduler:start-scheduler *scheduler*)))

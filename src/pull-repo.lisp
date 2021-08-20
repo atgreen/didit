@@ -20,9 +20,16 @@ License along with this program.  If not, see
 
 |#
 
-;;; package.lisp
+(in-package :didit)
 
-(defpackage #:didit
-  (:use #:cl)
-  (:shadow #:package)
-  (:export #:start-server #:stop-server #:alert/slack #:alert/tower #:check-didit))
+(defun pull-repo (repo-dirname repo-git-uri)
+  "Download the very latest version of REPO-GIT-URI into REPO-DIRNAME
+from a git repo."
+  (log:info "pull repo ~A" repo-git-uri)
+  (let ((command (if (fad:directory-exists-p repo-dirname)
+                     (format nil "bash -c \"(cd ~A; /usr/bin/git pull)\""
+                             repo-dirname)
+                     (format nil "GIT_TERMINAL_PROMPT=0 /usr/bin/git clone --depth 1 ~A ~A"
+                             repo-git-uri repo-dirname))))
+    (dolist (line (inferior-shell:run command))
+      (log:info line))))

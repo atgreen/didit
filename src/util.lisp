@@ -20,8 +20,7 @@
   (:use #:cl)
   (:shadow #:package)
   (:export #:valid-url?
-	   #:make-absolute-pathname
-	   #:escape-json-string))
+	   #:make-absolute-pathname))
 
 (in-package #:didit.util)
 
@@ -38,10 +37,3 @@
   "Returns T if STRING is a valid http or https url."
   (and string
        (quri:uri-http-p (quri:uri string))))
-
-(defun escape-json-string (string)
-  "Escape character sequences used for json strings."
-  (let* ((s1 (str:replace-all "\\" "\\\\\\\\" string))
-	 (s2 (str:replace-all "\"" "\\\\\\\"" s1)))
-    (format nil "~A~%" s2)
-    s2))

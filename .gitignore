@@ -2,3 +2,4 @@
 didit
 #*
 /test/private.ini
+*.etcd

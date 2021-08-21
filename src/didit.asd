@@ -27,7 +27,6 @@ License along with this program.  If not, see
   :serial t
   :components ((:file "package")
                (:file "alert")
-               (:file "api")
 	       (:file "didit")
                (:file "load-config")
                (:file "pull-repo")

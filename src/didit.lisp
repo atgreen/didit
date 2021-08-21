@@ -25,6 +25,7 @@ License along with this program.  If not, see
 (defstruct didit
   (scheduler-task nil)
   (name nil :type string)
+  (oneshot nil)
   (alert nil :type alert)
   (token nil :type string))
 
@@ -50,4 +51,6 @@ License along with this program.  If not, see
           (didit (gethash didit-key *didit-table*)))
       (if done?
           (cl-etcd:delete-etcd (str:concat "done" didit-key) *etcd*)
-          (send-alert (didit-alert didit) (didit-name didit))))))
+          (send-alert (didit-alert didit) (didit-name didit)))
+      (if (didit-oneshot didit)
+          (scheduler:delete-scheduler-task *scheduler* (didit-scheduler-task didit))))))

@@ -130,8 +130,34 @@ root-dir = \"/tmp/var/didit/\"
 (easy-routes:defroute health ("/health") ()
   "ready")
 
-(easy-routes:defroute health ("/reload") ()
+(easy-routes:defroute reload ("/reload") ()
   (load-config *etcd*))
+
+(defvar *random-state-lock*
+  (bt:make-lock "Random state lock"))
+(setf *random-state* (make-random-state t))
+
+(defun random-hex-string ()
+  (bt:with-lock-held (*random-state-lock*)
+    (format nil "~:@(~36,8,'0R~)" (random (expt 36 8) *random-state*))))
+
+(easy-routes:defroute oneshot ("/oneshot/:prefix") (alert minutes)
+  (let ((token (random-hex-string)))
+    (multiple-value-bind
+	  (second minute)
+        (decoded-universal-time (+ (get-universal-time) (+ 60 (* 60 (parse-integer minutes)))))
+      (setf (gethash (format nil "/didit/~A" token) *didit-table*)
+            (make-didit
+             :name "oneshot"
+             :alert (gethash (format nil "~A/~A" prefix (gethash "alert" alert)) *alerts-table*)
+             :token token
+             :oneshot t
+             :scheduler-task (scheduler:create-scheduler-task
+                              *scheduler*
+                              (format nil "~A * * * * (didit:check-didit \"~A\")"
+                                      minut didit-key)))))))
+
+(decode-universal-time (+ (get-universal-time) (* 60 122)))
 
 (markup:deftag page-template (children &key title)
    <html>

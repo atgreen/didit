@@ -145,17 +145,18 @@ root-dir = \"/tmp/var/didit/\"
   (let ((token (random-hex-string)))
     (multiple-value-bind
 	  (second minute)
-        (decoded-universal-time (+ (get-universal-time) (+ 60 (* 60 (parse-integer minutes)))))
-      (setf (gethash (format nil "/didit/~A" token) *didit-table*)
+        (decode-universal-time (+ (get-universal-time) (+ 60 (* 60 (parse-integer minutes)))))
+      (setf (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*)
             (make-didit
              :name "oneshot"
-             :alert (gethash (format nil "~A/~A" prefix (gethash "alert" alert)) *alerts-table*)
+             :alert (gethash (format nil "~A/~A" prefix alert) *alerts-table*)
              :token token
              :oneshot t
              :scheduler-task (scheduler:create-scheduler-task
                               *scheduler*
-                              (format nil "~A * * * * (didit:check-didit \"~A\")"
-                                      minut didit-key)))))))
+                              (format nil "~A * * * * (didit:check-didit \"/didit/~A/~A\")"
+                                      minute prefix token)))))
+    (format nil "~A/didit/~A/~A" *server-uri* prefix token)))
 
 (decode-universal-time (+ (get-universal-time) (* 60 122)))
 

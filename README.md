@@ -2,8 +2,6 @@
 
 # didit
 
-This is a WIP.
-
 Didit waits for things to happen, and if they don't happen on
 schedule, it will send an alert or trigger automation.
 

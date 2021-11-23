@@ -35,6 +35,7 @@ License along with this program.  If not, see
 (defun do-didit ()
   (let ((request-uri (hunchentoot:request-uri*)))
     (bt:with-lock-held (*didit-lock*)
+      (log:info "do-didit ~A" request-uri)
       (if (cl-etcd:get-etcd request-uri *etcd*)
         (progn
           (log:info "didit: ~A" request-uri)
@@ -53,4 +54,5 @@ License along with this program.  If not, see
           (cl-etcd:delete-etcd (str:concat "done" didit-key) *etcd*)
           (send-alert (didit-alert didit) (didit-name didit)))
       (if (didit-oneshot didit)
+          ;; TODO this isn't quite right yet
           (scheduler:delete-scheduler-task *scheduler* (didit-scheduler-task didit))))))

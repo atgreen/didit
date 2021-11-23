@@ -101,6 +101,7 @@ License along with this program.  If not, see
                                     (let ((didit-key (str:concat "/didit/" prefix "/" token)))
                                       (log:info didit-key)
                                       (setf (cl-etcd:get-etcd didit-key etcd) "1")
+                                      (log:info ">>>>>>>>>>>>>>>>>>>>>>>> ~A" (format nil "~A/~A" prefix (gethash "alert" value)) *alerts-table*)
                                       (setf (gethash (format nil "/didit/~A/~A" prefix token) *didit-table*)
                                             (make-didit
                                              :name (gethash "name" value)

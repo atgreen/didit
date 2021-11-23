@@ -5,10 +5,10 @@ set -e
 podman pod stop didit-pod || true
 podman pod rm didit-pod || true
 
-BASE_HASH=$(sha512sum src/didit.asd | cut -b 1-8)1
-podman images | grep ${BASE_HASH} > /dev/null 2>&1 || podman build -f build/Dockerfile.base --no-cache -t didit-base:${BASE_HASH}1 .
+BASE_HASH=$(sha512sum src/didit.asd | cut -b 1-8)3
+podman images | grep ${BASE_HASH} > /dev/null 2>&1 || podman build -f build/Dockerfile.base --no-cache -t didit-base:${BASE_HASH}3 .
 
-podman build -f build/Dockerfile -t didit:latest --no-cache --from didit-base:${BASE_HASH}1 src
+podman build -f build/Dockerfile -t didit:latest --no-cache --from didit-base:${BASE_HASH}3 src
 
 #cat test/test-pod1.yml | sed -e 's/\/home\/runner\/work\/didit\/didit\/test\/config.ini/\/home\/green\/git\/didit\/test\/private1.ini/' | podman play kube -
 #cat test/test-pod2.yml | sed -e 's/\/home\/runner\/work\/didit\/didit\/test\/config.ini/\/home\/green\/git\/didit\/test\/private2.ini/' | podman play kube -

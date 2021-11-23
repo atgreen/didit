@@ -39,8 +39,8 @@ License along with this program.  If not, see
                :cl-ppcre
                :cl-toml
                :drakma
-               :easy-routes
                :flexi-streams
+               :easy-routes
                :hunchentoot
                :inferior-shell
                :ironclad

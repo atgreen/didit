@@ -7,8 +7,9 @@ all:
 
 run:
 	sbcl --eval '(pushnew (truename "./src") ql:*local-project-directories* )' \
-	     --eval '(pushnew (truename "./src/third-party/scheduler") ql:*local-project-directories* )' \
-	     --eval '(pushnew (truename "./src/third-party/cl-etcd") ql:*local-project-directories* )' \
+	     --eval '(pushnew (truename "./src/local-projects/scheduler") ql:*local-project-directories* )' \
+	     --eval '(pushnew (truename "./src/local-projects/cl-etcd") ql:*local-project-directories* )' \
+	     --eval '(pushnew (truename "./src/local-projects/cl-stomp-20190521-git") ql:*local-project-directories* )' \
 	     --eval '(ql:register-local-projects)' \
 	     --eval '(ql:quickload :didit)' \
 	     --eval '(didit:start-server "test/private.ini")'

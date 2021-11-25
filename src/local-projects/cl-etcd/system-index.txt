@@ -1,0 +1,2 @@
+cl-etcd.asd
+test/etcd-test.asd

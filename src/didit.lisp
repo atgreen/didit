@@ -29,10 +29,11 @@ License along with this program.  If not, see
   (alert nil :type alert)
   (token nil :type string))
 
-(defvar *didit-lock* (bt:make-lock))
+(defvar *didit-lock* (bt:make-lock "didit-lock"))
 (defvar *didit-table* (make-hash-table :test 'equal))
 
 (defun do-didit ()
+  (log:info "do-didit!")
   (let ((request-uri (hunchentoot:request-uri*)))
     (bt:with-lock-held (*didit-lock*)
       (log:info "do-didit ~A" request-uri)

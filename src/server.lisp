@@ -58,7 +58,7 @@ License along with this program.  If not, see
 ;; Machinery for managing the execution of the server.
 
 (defvar *shutdown-cv* (bt:make-condition-variable))
-(defvar *server-lock* (bt:make-lock))
+(defvar *server-lock* (bt:make-lock "server-lock"))
 
 (defvar *etcd* nil)
 
@@ -226,7 +226,7 @@ root-dir = \"/tmp/var/didit/\"
 
 (defvar *alerts-table* (make-hash-table :test 'equal))
 (defvar *scheduler* (make-instance 'scheduler:in-memory-scheduler))
-(defvar *scheduler-lock* (bt:make-lock))
+(defvar *scheduler-lock* (bt:make-lock "scheduler-lock"))
 
 (defun become-leader (etcd)
   (bt:with-lock-held (*scheduler-lock*)

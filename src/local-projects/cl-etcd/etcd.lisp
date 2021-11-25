@@ -179,7 +179,7 @@ nil and we are creating a non-clustered etcd instance."
                              :method :put
                              :content (str:concat "value=" value))
       (when +verbose+
-        (log:info "setting ~A" (concatenate 'string get-put-uri key)))
+        (format t "cl-etcd: setting ~A~%" (concatenate 'string get-put-uri key)))
       (when (and (not (= error-code 200)) (not (= error-code 201)))
         (error "can't store in etcd[~A]: ~A" error-code (flexi-streams:octets-to-string answer)))
       key)))
@@ -216,13 +216,13 @@ Returns NIL if KEY not found.  Throws an error on unexpected errors."
         (drakma:http-request (str:concat get-put-uri key (if wait "?wait=true" ""))
                              :method :get)
       (when +verbose+
-        (log:info "getting ~A = ~A" (str:concat get-put-uri key (if wait "?wait=true" "")) code))
+        (format t "cl-etcd: getting ~A = ~A~%" (str:concat get-put-uri key (if wait "?wait=true" "")) code))
       (if (= code 404)
           nil
           (let ((json (json:decode-json-from-string
                        (flexi-streams:octets-to-string answer))))
             (when +verbose+
-              (log:info "    ~A" (flexi-streams:octets-to-string answer)))
+              (format t "cl-etcd:    ~A~%" (flexi-streams:octets-to-string answer)))
             (if (= code 200)
                 (cdr (assoc :value (cdr (assoc :node json))))
                 (error (cdr (assoc :message json)))))))))

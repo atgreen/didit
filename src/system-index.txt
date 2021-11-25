@@ -1,6 +1,6 @@
 didit.asd
-third-party/cl-etcd/cl-etcd.asd
-third-party/scheduler/scheduler.asd
-third-party/cl-etcd/test/etcd-test.asd
-third-party/cl-stomp-20190521-git/cl-stomp.asd
-third-party/cl-stomp-20190521-git/cl-stomp-example.asd
+local-projects/cl-etcd/cl-etcd.asd
+local-projects/scheduler/scheduler.asd
+local-projects/cl-etcd/test/etcd-test.asd
+local-projects/cl-stomp-20190521-git/cl-stomp.asd
+local-projects/cl-stomp-20190521-git/cl-stomp-example.asd

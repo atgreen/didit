@@ -45,12 +45,17 @@ License along with this program.  If not, see
         ;; return 404?
         ))))
 
+(bt:with-lock-held (*didit-lock*)
+  (log:info "Got lock!")
+  555)
+
 (defun check-didit (didit-key)
   "Check whether a didit was done, and send alert if required."
   (log:info "check-didit ~A" didit-key)
   (bt:with-lock-held (*didit-lock*)
     (let ((done? (cl-etcd:get-etcd (str:concat "done" didit-key) *etcd*))
           (didit (gethash didit-key *didit-table*)))
+      (log:info "    done? = ~A" done?)
       (if done?
           (cl-etcd:delete-etcd (str:concat "done" didit-key) *etcd*)
           (send-alert (didit-alert didit) (didit-name didit)))

@@ -154,7 +154,7 @@ nil and we are creating a non-clustered etcd instance."
       (let ((cmd (if config
                      `("etcd"
                        "--name" ,(get-config-value "name")
-                       "--data-dir" ,(get-config-value "data-dir")
+                       "--data-dir" (or ,(get-config-value "data-dir") ".")
                        "--initial-advertise-peer-urls" ,(get-config-value "initial-advertise-peer-urls")
                        "--listen-peer-urls" ,(get-config-value "listen-peer-urls")
                        "--listen-client-urls" ,(get-config-value "listen-client-urls")
@@ -178,6 +178,8 @@ nil and we are creating a non-clustered etcd instance."
         (drakma:http-request (concatenate 'string get-put-uri key)
                              :method :put
                              :content (str:concat "value=" value))
+      (when +verbose+
+        (log:info "setting ~A" (concatenate 'string get-put-uri key)))
       (when (and (not (= error-code 200)) (not (= error-code 201)))
         (error "can't store in etcd[~A]: ~A" error-code (flexi-streams:octets-to-string answer)))
       key)))
@@ -213,10 +215,14 @@ Returns NIL if KEY not found.  Throws an error on unexpected errors."
     (multiple-value-bind (answer code)
         (drakma:http-request (str:concat get-put-uri key (if wait "?wait=true" ""))
                              :method :get)
+      (when +verbose+
+        (log:info "getting ~A = ~A" (str:concat get-put-uri key (if wait "?wait=true" "")) code))
       (if (= code 404)
           nil
           (let ((json (json:decode-json-from-string
                        (flexi-streams:octets-to-string answer))))
+            (when +verbose+
+              (log:info "    ~A" (flexi-streams:octets-to-string answer)))
             (if (= code 200)
                 (cdr (assoc :value (cdr (assoc :node json))))
                 (error (cdr (assoc :message json)))))))))

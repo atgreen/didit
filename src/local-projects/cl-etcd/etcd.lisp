@@ -154,6 +154,7 @@ nil and we are creating a non-clustered etcd instance."
       (let ((cmd (if config
                      `("etcd"
                        "--name" ,(get-config-value "name")
+                       "--data-dir" ,(get-config-value "data-dir")
                        "--initial-advertise-peer-urls" ,(get-config-value "initial-advertise-peer-urls")
                        "--listen-peer-urls" ,(get-config-value "listen-peer-urls")
                        "--listen-client-urls" ,(get-config-value "listen-client-urls")

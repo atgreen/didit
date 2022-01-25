@@ -2,7 +2,7 @@
 
 #|
 
-Copyright (C) 2021  Anthony Green <green@moxielogic.com>
+Copyright (C) 2021, 2022  Anthony Green <green@moxielogic.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
@@ -25,4 +25,4 @@ License along with this program.  If not, see
 (defpackage #:didit
   (:use #:cl)
   (:shadow #:package)
-  (:export #:start-server #:stop-server #:alert/slack #:alert/tower #:check-didit))
+  (:export #:start-server #:stop-server #:alert/webhook #:alert/slack #:alert/tower #:check-didit))

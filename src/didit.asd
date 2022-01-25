@@ -2,7 +2,7 @@
 
 #|
 
-Copyright (C) 2021  Anthony Green <green@moxielogic.com>
+Copyright (C) 2021, 2022  Anthony Green <green@moxielogic.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
@@ -33,6 +33,7 @@ License along with this program.  If not, see
                (:file "server"))
   :depends-on (:async-process
                :bt-semaphore
+               :cl-base64
                :cl-etcd
                :cl-fad
                :cl-json

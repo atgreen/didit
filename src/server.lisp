@@ -300,6 +300,8 @@ root-dir = \"/tmp/var/didit/\"
 
       (bt:make-thread (lambda () (scheduler:start-scheduler *scheduler*)))
 
+      (log:info "Launching etcd")
+
       (cl-etcd:with-etcd (etcd (gethash "etcd" *config*) :on-leader #'become-leader :on-follower #'become-follower)
 
         (log:info "Starting server")

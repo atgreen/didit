@@ -2,7 +2,7 @@
 
 #|
 
-Copyright (C) 2021  Anthony Green <green@moxielogic.com>
+Copyright (C) 2021, 2022  Anthony Green <green@moxielogic.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
@@ -24,6 +24,31 @@ License along with this program.  If not, see
 
 (defclass alert ()
   ((config :initarg :config :reader config)))
+
+#|
+===========================================================================
+Webhook Alerts
+
+Send a base64-encoded message
+===========================================================================
+|#
+
+(defclass alert/webhook (alert)
+  ((webhook-url :reader webhook-url)))
+
+(defmethod initialize-instance :after ((alert alert/webhook) &key)
+  (with-slots (config webhook-url) alert
+    (setf webhook-url (gethash "webhook-url" config))))
+
+(defmethod send-alert ((alert alert/webhook) message)
+  (log:info "alert/webhook: ~A" message)
+  (multiple-value-bind (a b c d e f g)
+      (drakma:http-request (webhook-url alert)
+                           :method :post
+                           :content-type "text/text"
+                           :redirect 100
+                           :content (cl-base64:string-to-base64-string message))
+    (log:info a)))
 
 #|
 ===========================================================================
